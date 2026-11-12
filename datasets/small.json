@@ -1,0 +1,144 @@
+{
+  "$schema": "./tournament.schema.json",
+  "name": "Tournoi du club — 6 équipes",
+  "description": "Petit tournoi sur un week-end : 6 équipes, 2 terrains, round-robin simple (15 matchs).",
+  "format": "round_robin",
+  "teams": [
+    {
+      "id": "LIO",
+      "name": "Lions",
+      "unavailable_slots": [
+        "J1-09h",
+        "J1-10h"
+      ]
+    },
+    {
+      "id": "AIG",
+      "name": "Aigles"
+    },
+    {
+      "id": "REQ",
+      "name": "Requins"
+    },
+    {
+      "id": "LOU",
+      "name": "Loups",
+      "preferred_slots": [
+        "J2-14h",
+        "J2-15h",
+        "J2-16h"
+      ]
+    },
+    {
+      "id": "OUR",
+      "name": "Ours",
+      "unavailable_slots": [
+        "J2-16h"
+      ]
+    },
+    {
+      "id": "FAU",
+      "name": "Faucons"
+    }
+  ],
+  "fields": [
+    {
+      "id": "T1",
+      "name": "Terrain 1"
+    },
+    {
+      "id": "T2",
+      "name": "Terrain 2",
+      "unavailable_slots": [
+        "J1-09h"
+      ]
+    }
+  ],
+  "slots": [
+    {
+      "id": "J1-09h",
+      "day": "2026-12-05",
+      "start": "09:00",
+      "duration_minutes": 60
+    },
+    {
+      "id": "J1-10h",
+      "day": "2026-12-05",
+      "start": "10:00",
+      "duration_minutes": 60
+    },
+    {
+      "id": "J1-11h",
+      "day": "2026-12-05",
+      "start": "11:00",
+      "duration_minutes": 60
+    },
+    {
+      "id": "J1-14h",
+      "day": "2026-12-05",
+      "start": "14:00",
+      "duration_minutes": 60
+    },
+    {
+      "id": "J1-15h",
+      "day": "2026-12-05",
+      "start": "15:00",
+      "duration_minutes": 60
+    },
+    {
+      "id": "J1-16h",
+      "day": "2026-12-05",
+      "start": "16:00",
+      "duration_minutes": 60
+    },
+    {
+      "id": "J2-09h",
+      "day": "2026-12-06",
+      "start": "09:00",
+      "duration_minutes": 60
+    },
+    {
+      "id": "J2-10h",
+      "day": "2026-12-06",
+      "start": "10:00",
+      "duration_minutes": 60
+    },
+    {
+      "id": "J2-11h",
+      "day": "2026-12-06",
+      "start": "11:00",
+      "duration_minutes": 60
+    },
+    {
+      "id": "J2-14h",
+      "day": "2026-12-06",
+      "start": "14:00",
+      "duration_minutes": 60
+    },
+    {
+      "id": "J2-15h",
+      "day": "2026-12-06",
+      "start": "15:00",
+      "duration_minutes": 60
+    },
+    {
+      "id": "J2-16h",
+      "day": "2026-12-06",
+      "start": "16:00",
+      "duration_minutes": 60
+    }
+  ],
+  "incompatibilities": [
+    {
+      "teams": [
+        "LIO",
+        "AIG"
+      ],
+      "reason": "même entraîneur"
+    }
+  ],
+  "rules": {
+    "min_rest_minutes": 60,
+    "max_matches_per_team_per_day": 3
+  }
+}

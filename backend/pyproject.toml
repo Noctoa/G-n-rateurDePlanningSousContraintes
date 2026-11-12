@@ -5,6 +5,7 @@ description = "Générateur de planning de tournoi sous contraintes (API + solve
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.162.5",
+    "pydantic>=2.14.3",
     "uvicorn[standard]>=0.54.0",
 ]
 

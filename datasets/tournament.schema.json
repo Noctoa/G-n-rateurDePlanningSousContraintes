@@ -1,0 +1,304 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tournament.schema.json",
+  "$defs": {
+    "Incompatibility": {
+      "additionalProperties": false,
+      "description": "Deux équipes qui ne doivent jamais jouer en même temps (staff ou joueurs partagés…).",
+      "properties": {
+        "teams": {
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Teams",
+          "type": "array"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        }
+      },
+      "required": [
+        "teams"
+      ],
+      "title": "Incompatibility",
+      "type": "object"
+    },
+    "Rules": {
+      "additionalProperties": false,
+      "description": "Paramètres des contraintes dures globales.",
+      "properties": {
+        "min_rest_minutes": {
+          "default": 0,
+          "description": "Repos minimum d'une équipe entre la fin d'un match et le début du suivant.",
+          "minimum": 0,
+          "title": "Min Rest Minutes",
+          "type": "integer"
+        },
+        "max_matches_per_team_per_day": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Matches Per Team Per Day"
+        }
+      },
+      "title": "Rules",
+      "type": "object"
+    },
+    "Slot": {
+      "additionalProperties": false,
+      "description": "Un créneau horaire : un jour, une heure de début, une durée.\n\n`min_matches` / `max_matches` sont les quotas du créneau (tous terrains confondus).",
+      "properties": {
+        "id": {
+          "description": "Identifiant unique (lettres, chiffres, '-' et '_').",
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_-]+$",
+          "title": "Id",
+          "type": "string"
+        },
+        "day": {
+          "format": "date",
+          "title": "Day",
+          "type": "string"
+        },
+        "start": {
+          "format": "time",
+          "title": "Start",
+          "type": "string"
+        },
+        "duration_minutes": {
+          "exclusiveMinimum": 0,
+          "maximum": 1440,
+          "title": "Duration Minutes",
+          "type": "integer"
+        },
+        "min_matches": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Min Matches",
+          "type": "integer"
+        },
+        "max_matches": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Matches"
+        }
+      },
+      "required": [
+        "id",
+        "day",
+        "start",
+        "duration_minutes"
+      ],
+      "title": "Slot",
+      "type": "object"
+    },
+    "Team": {
+      "additionalProperties": false,
+      "description": "Une équipe participante.",
+      "properties": {
+        "id": {
+          "description": "Identifiant unique (lettres, chiffres, '-' et '_').",
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_-]+$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "pool": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Poule de l'équipe. Si une équipe a une poule, toutes doivent en avoir une.",
+          "title": "Pool"
+        },
+        "unavailable_slots": {
+          "description": "Créneaux où l'équipe ne peut pas jouer (dur).",
+          "items": {
+            "type": "string"
+          },
+          "title": "Unavailable Slots",
+          "type": "array"
+        },
+        "preferred_slots": {
+          "description": "Créneaux où l'équipe préfère jouer (souple).",
+          "items": {
+            "type": "string"
+          },
+          "title": "Preferred Slots",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ],
+      "title": "Team",
+      "type": "object"
+    },
+    "TournamentFormat": {
+      "enum": [
+        "round_robin",
+        "double_round_robin"
+      ],
+      "title": "TournamentFormat",
+      "type": "string"
+    },
+    "Venue": {
+      "additionalProperties": false,
+      "description": "Un terrain. Nommé `Venue` côté Python pour ne pas masquer `pydantic.Field`.",
+      "properties": {
+        "id": {
+          "description": "Identifiant unique (lettres, chiffres, '-' et '_').",
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_-]+$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "unavailable_slots": {
+          "description": "Créneaux où le terrain est indisponible (dur).",
+          "items": {
+            "type": "string"
+          },
+          "title": "Unavailable Slots",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ],
+      "title": "Venue",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Données d'entrée complètes d'un tournoi à planifier.",
+  "properties": {
+    "$schema": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Chemin du JSON Schema (autocomplétion dans l'éditeur), ignoré sinon.",
+      "title": "$Schema"
+    },
+    "name": {
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+    },
+    "description": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Description"
+    },
+    "format": {
+      "$ref": "#/$defs/TournamentFormat",
+      "default": "round_robin"
+    },
+    "teams": {
+      "items": {
+        "$ref": "#/$defs/Team"
+      },
+      "minItems": 2,
+      "title": "Teams",
+      "type": "array"
+    },
+    "fields": {
+      "description": "Terrains disponibles.",
+      "items": {
+        "$ref": "#/$defs/Venue"
+      },
+      "minItems": 1,
+      "title": "Fields",
+      "type": "array"
+    },
+    "slots": {
+      "items": {
+        "$ref": "#/$defs/Slot"
+      },
+      "minItems": 1,
+      "title": "Slots",
+      "type": "array"
+    },
+    "incompatibilities": {
+      "items": {
+        "$ref": "#/$defs/Incompatibility"
+      },
+      "title": "Incompatibilities",
+      "type": "array"
+    },
+    "rules": {
+      "$ref": "#/$defs/Rules"
+    }
+  },
+  "required": [
+    "name",
+    "teams",
+    "fields",
+    "slots"
+  ],
+  "title": "Tournament",
+  "type": "object"
+}

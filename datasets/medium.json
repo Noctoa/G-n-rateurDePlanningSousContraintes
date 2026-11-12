@@ -1,0 +1,291 @@
+{
+  "$schema": "./tournament.schema.json",
+  "name": "Open régional — 16 équipes",
+  "description": "16 équipes en 2 poules de 8, round-robin dans chaque poule (56 matchs), 4 terrains sur 3 jours.",
+  "format": "round_robin",
+  "teams": [
+    {
+      "id": "PAR",
+      "name": "Paris FC",
+      "pool": "A"
+    },
+    {
+      "id": "LYO",
+      "name": "Lyon FC",
+      "pool": "A"
+    },
+    {
+      "id": "MAR",
+      "name": "Marseille FC",
+      "pool": "A",
+      "unavailable_slots": [
+        "J1-09h",
+        "J1-10h",
+        "J1-11h"
+      ]
+    },
+    {
+      "id": "LIL",
+      "name": "Lille FC",
+      "pool": "A"
+    },
+    {
+      "id": "NAN",
+      "name": "Nantes FC",
+      "pool": "A"
+    },
+    {
+      "id": "REN",
+      "name": "Rennes FC",
+      "pool": "A",
+      "preferred_slots": [
+        "J2-14h",
+        "J2-15h"
+      ]
+    },
+    {
+      "id": "BOR",
+      "name": "Bordeaux FC",
+      "pool": "A"
+    },
+    {
+      "id": "TOU",
+      "name": "Toulouse FC",
+      "pool": "A"
+    },
+    {
+      "id": "NIC",
+      "name": "Nice FC",
+      "pool": "B"
+    },
+    {
+      "id": "MET",
+      "name": "Metz FC",
+      "pool": "B",
+      "unavailable_slots": [
+        "J3-16h",
+        "J3-17h"
+      ]
+    },
+    {
+      "id": "BRE",
+      "name": "Brest FC",
+      "pool": "B"
+    },
+    {
+      "id": "DIJ",
+      "name": "Dijon FC",
+      "pool": "B"
+    },
+    {
+      "id": "REI",
+      "name": "Reims FC",
+      "pool": "B",
+      "preferred_slots": [
+        "J1-13h",
+        "J1-14h"
+      ]
+    },
+    {
+      "id": "ANG",
+      "name": "Angers FC",
+      "pool": "B"
+    },
+    {
+      "id": "PAU",
+      "name": "Pau FC",
+      "pool": "B"
+    },
+    {
+      "id": "CAE",
+      "name": "Caen FC",
+      "pool": "B"
+    }
+  ],
+  "fields": [
+    {
+      "id": "T1",
+      "name": "Terrain 1"
+    },
+    {
+      "id": "T2",
+      "name": "Terrain 2"
+    },
+    {
+      "id": "T3",
+      "name": "Terrain 3"
+    },
+    {
+      "id": "T4",
+      "name": "Terrain 4"
+    }
+  ],
+  "slots": [
+    {
+      "id": "J1-09h",
+      "day": "2026-12-11",
+      "start": "09:00",
+      "duration_minutes": 60,
+      "min_matches": 2
+    },
+    {
+      "id": "J1-10h",
+      "day": "2026-12-11",
+      "start": "10:00",
+      "duration_minutes": 60
+    },
+    {
+      "id": "J1-11h",
+      "day": "2026-12-11",
+      "start": "11:00",
+      "duration_minutes": 60
+    },
+    {
+      "id": "J1-13h",
+      "day": "2026-12-11",
+      "start": "13:00",
+      "duration_minutes": 60
+    },
+    {
+      "id": "J1-14h",
+      "day": "2026-12-11",
+      "start": "14:00",
+      "duration_minutes": 60
+    },
+    {
+      "id": "J1-15h",
+      "day": "2026-12-11",
+      "start": "15:00",
+      "duration_minutes": 60
+    },
+    {
+      "id": "J1-16h",
+      "day": "2026-12-11",
+      "start": "16:00",
+      "duration_minutes": 60
+    },
+    {
+      "id": "J1-17h",
+      "day": "2026-12-11",
+      "start": "17:00",
+      "duration_minutes": 60
+    },
+    {
+      "id": "J2-09h",
+      "day": "2026-12-12",
+      "start": "09:00",
+      "duration_minutes": 60
+    },
+    {
+      "id": "J2-10h",
+      "day": "2026-12-12",
+      "start": "10:00",
+      "duration_minutes": 60
+    },
+    {
+      "id": "J2-11h",
+      "day": "2026-12-12",
+      "start": "11:00",
+      "duration_minutes": 60
+    },
+    {
+      "id": "J2-13h",
+      "day": "2026-12-12",
+      "start": "13:00",
+      "duration_minutes": 60
+    },
+    {
+      "id": "J2-14h",
+      "day": "2026-12-12",
+      "start": "14:00",
+      "duration_minutes": 60
+    },
+    {
+      "id": "J2-15h",
+      "day": "2026-12-12",
+      "start": "15:00",
+      "duration_minutes": 60
+    },
+    {
+      "id": "J2-16h",
+      "day": "2026-12-12",
+      "start": "16:00",
+      "duration_minutes": 60
+    },
+    {
+      "id": "J2-17h",
+      "day": "2026-12-12",
+      "start": "17:00",
+      "duration_minutes": 60
+    },
+    {
+      "id": "J3-09h",
+      "day": "2026-12-13",
+      "start": "09:00",
+      "duration_minutes": 60
+    },
+    {
+      "id": "J3-10h",
+      "day": "2026-12-13",
+      "start": "10:00",
+      "duration_minutes": 60
+    },
+    {
+      "id": "J3-11h",
+      "day": "2026-12-13",
+      "start": "11:00",
+      "duration_minutes": 60
+    },
+    {
+      "id": "J3-13h",
+      "day": "2026-12-13",
+      "start": "13:00",
+      "duration_minutes": 60
+    },
+    {
+      "id": "J3-14h",
+      "day": "2026-12-13",
+      "start": "14:00",
+      "duration_minutes": 60
+    },
+    {
+      "id": "J3-15h",
+      "day": "2026-12-13",
+      "start": "15:00",
+      "duration_minutes": 60
+    },
+    {
+      "id": "J3-16h",
+      "day": "2026-12-13",
+      "start": "16:00",
+      "duration_minutes": 60
+    },
+    {
+      "id": "J3-17h",
+      "day": "2026-12-13",
+      "start": "17:00",
+      "duration_minutes": 60,
+      "max_matches": 2
+    }
+  ],
+  "incompatibilities": [
+    {
+      "teams": [
+        "PAR",
+        "NIC"
+      ],
+      "reason": "joueurs partagés"
+    },
+    {
+      "teams": [
+        "LYO",
+        "REI"
+      ],
+      "reason": "même staff médical"
+    }
+  ],
+  "rules": {
+    "min_rest_minutes": 60,
+    "max_matches_per_team_per_day": 3
+  }
+}

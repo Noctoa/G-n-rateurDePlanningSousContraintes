@@ -1,0 +1,83 @@
+{
+  "$schema": "./tournament.schema.json",
+  "name": "Tournoi impossible — capacité insuffisante",
+  "description": "Volontairement insoluble : 6 équipes en round-robin = 15 matchs, mais seulement 2 terrains × 6 créneaux = 12 places.",
+  "format": "round_robin",
+  "teams": [
+    {
+      "id": "LIO",
+      "name": "Lions"
+    },
+    {
+      "id": "AIG",
+      "name": "Aigles"
+    },
+    {
+      "id": "REQ",
+      "name": "Requins"
+    },
+    {
+      "id": "LOU",
+      "name": "Loups"
+    },
+    {
+      "id": "OUR",
+      "name": "Ours"
+    },
+    {
+      "id": "FAU",
+      "name": "Faucons"
+    }
+  ],
+  "fields": [
+    {
+      "id": "T1",
+      "name": "Terrain 1"
+    },
+    {
+      "id": "T2",
+      "name": "Terrain 2"
+    }
+  ],
+  "slots": [
+    {
+      "id": "J1-09h",
+      "day": "2026-12-05",
+      "start": "09:00",
+      "duration_minutes": 60
+    },
+    {
+      "id": "J1-10h",
+      "day": "2026-12-05",
+      "start": "10:00",
+      "duration_minutes": 60
+    },
+    {
+      "id": "J1-11h",
+      "day": "2026-12-05",
+      "start": "11:00",
+      "duration_minutes": 60
+    },
+    {
+      "id": "J1-14h",
+      "day": "2026-12-05",
+      "start": "14:00",
+      "duration_minutes": 60
+    },
+    {
+      "id": "J1-15h",
+      "day": "2026-12-05",
+      "start": "15:00",
+      "duration_minutes": 60
+    },
+    {
+      "id": "J1-16h",
+      "day": "2026-12-05",
+      "start": "16:00",
+      "duration_minutes": 60
+    }
+  ],
+  "rules": {
+    "min_rest_minutes": 0
+  }
+}
