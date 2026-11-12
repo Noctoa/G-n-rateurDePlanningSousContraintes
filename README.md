@@ -32,6 +32,12 @@ cd backend && uv run uvicorn planning.main:app --reload
 cd frontend && npm install && npm run dev
 ```
 
+### Résoudre un tournoi en ligne de commande
+
+```bash
+cd backend && uv run python -m planning.solve ../datasets/small.json --timeout 10
+```
+
 ## Qualité
 
 ```bash
