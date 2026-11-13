@@ -122,3 +122,17 @@ def test_incremental_checks_agree_with_full_checks() -> None:
             assert c.is_consistent(var, value, partial) == c.is_satisfied(
                 {**partial, var: value}
             ), c
+
+
+def test_search_can_be_cancelled_from_outside() -> None:
+    calls = 0
+
+    def stop_after_a_while() -> bool:
+        nonlocal calls
+        calls += 1
+        return calls >= 3
+
+    result = solve(_coloring(10, 9), timeout_seconds=None, should_stop=stop_after_a_while)
+    assert result.status is SolveStatus.CANCELLED
+    assert result.assignment is None
+    assert result.stats.nodes > 0

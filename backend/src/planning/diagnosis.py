@@ -27,7 +27,7 @@ from pydantic import BaseModel
 
 from planning.constraints.catalog import HardConstraintId as H
 from planning.domain.models import Match, Slot, Team, Tournament
-from planning.solver.backtracking import SolveStatus, solve
+from planning.solver.backtracking import SolveStatus, StopCallback, solve
 from planning.solver.csp import Constraint, Problem
 
 
@@ -338,6 +338,7 @@ def find_conflict(
     problem: Problem,
     timeout_per_solve: float = 1.0,
     budget_seconds: float = 20.0,
+    should_stop: StopCallback | None = None,
 ) -> tuple[list[Constraint], bool]:
     """Sous-ensemble de contraintes qui, ensemble, rendent le problème insoluble.
 
@@ -350,13 +351,15 @@ def find_conflict(
     core = list(problem.constraints)
     minimal = True
     for candidate in list(core):
-        if perf_counter() > deadline:
+        if perf_counter() > deadline or (should_stop is not None and should_stop()):
             return core, False
         trial = [c for c in core if c is not candidate]
-        result = solve(Problem(problem.variables, problem.domains, trial), timeout_per_solve)
+        result = solve(
+            Problem(problem.variables, problem.domains, trial), timeout_per_solve, should_stop
+        )
         if result.status is SolveStatus.INFEASIBLE:
             core = trial
-        elif result.status is SolveStatus.TIMEOUT:
+        elif result.status is not SolveStatus.SOLVED:
             minimal = False
     return core, minimal
 

@@ -11,7 +11,7 @@ pas dépendre de la limite de récursion de Python sur les gros tournois.
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from enum import StrEnum
 from time import perf_counter
@@ -26,6 +26,8 @@ class SolveStatus(StrEnum):
     """Toute la recherche a été parcourue : il est **prouvé** qu'aucune solution n'existe."""
     TIMEOUT = "timeout"
     """Pas de solution trouvée dans le temps imparti. Cela ne prouve **pas** l'impossibilité."""
+    CANCELLED = "cancelled"
+    """Recherche interrompue à la demande de l'appelant (`should_stop`)."""
 
 
 @dataclass
@@ -50,8 +52,15 @@ class SolveResult:
 
 _TIME_CHECK_EVERY = 256
 
+StopCallback = Callable[[], bool]
+"""Fonction consultée régulièrement pendant la recherche ; `True` = s'arrêter (annulation)."""
 
-def solve(problem: Problem, timeout_seconds: float | None = 10.0) -> SolveResult:
+
+def solve(
+    problem: Problem,
+    timeout_seconds: float | None = 10.0,
+    should_stop: StopCallback | None = None,
+) -> SolveResult:
     started = perf_counter()
     deadline = None if timeout_seconds is None else started + timeout_seconds
     stats = SolveStats()
@@ -81,12 +90,11 @@ def solve(problem: Problem, timeout_seconds: float | None = 10.0) -> SolveResult
 
         for value in stack[-1]:
             stats.nodes += 1
-            if (
-                deadline is not None
-                and stats.nodes % _TIME_CHECK_EVERY == 0
-                and perf_counter() > deadline
-            ):
-                return finish(SolveStatus.TIMEOUT)
+            if stats.nodes % _TIME_CHECK_EVERY == 0:
+                if should_stop is not None and should_stop():
+                    return finish(SolveStatus.CANCELLED)
+                if deadline is not None and perf_counter() > deadline:
+                    return finish(SolveStatus.TIMEOUT)
             if problem.is_consistent(var, value, assignment):
                 assignment[var] = value
                 break

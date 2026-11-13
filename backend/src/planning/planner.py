@@ -23,7 +23,7 @@ from planning.diagnosis import (
 )
 from planning.domain.fixtures import generate_matches
 from planning.domain.models import Match, Tournament
-from planning.solver.backtracking import SolveResult, SolveStatus, solve
+from planning.solver.backtracking import SolveResult, SolveStatus, StopCallback, solve
 from planning.solver.tournament import build_problem
 
 
@@ -39,7 +39,9 @@ def plan(
     tournament: Tournament,
     timeout_seconds: float | None = 10.0,
     conflict_budget_seconds: float = 20.0,
+    should_stop: StopCallback | None = None,
 ) -> PlanningReport:
+    """`should_stop` permet d'annuler depuis un autre thread (cf. l'API et ses jobs)."""
     matches = generate_matches(tournament)
 
     conflicts = precheck(tournament, matches)
@@ -56,12 +58,17 @@ def plan(
         )
 
     problem = build_problem(tournament, matches)
-    result = solve(problem, timeout_seconds)
+    result = solve(problem, timeout_seconds, should_stop)
 
     if result.status is SolveStatus.SOLVED:
         diagnosis = Diagnosis(
             feasibility=Feasibility.FEASIBLE,
             summary="Planning trouvé : toutes les règles obligatoires sont respectées.",
+        )
+    elif result.status is SolveStatus.CANCELLED:
+        diagnosis = Diagnosis(
+            feasibility=Feasibility.UNKNOWN,
+            summary="Recherche annulée avant d'avoir trouvé un planning.",
         )
     elif result.status is SolveStatus.TIMEOUT:
         diagnosis = Diagnosis(
@@ -71,7 +78,9 @@ def plan(
             "possibilités. Essayez un délai plus long ou assouplissez certaines règles.",
         )
     else:
-        core, minimal = find_conflict(problem, budget_seconds=conflict_budget_seconds)
+        core, minimal = find_conflict(
+            problem, budget_seconds=conflict_budget_seconds, should_stop=should_stop
+        )
         diagnosis = Diagnosis(
             feasibility=Feasibility.INFEASIBLE,
             summary="Aucun planning ne peut respecter toutes les règles obligatoires "

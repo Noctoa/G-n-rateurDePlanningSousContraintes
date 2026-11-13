@@ -157,13 +157,13 @@ class Tournament(_Model):
         errors: list[str] = []
 
         for label, ids in (
-            ("équipe", [t.id for t in self.teams]),
-            ("terrain", [f.id for f in self.fields]),
-            ("créneau", [s.id for s in self.slots]),
+            ("d'équipe", [t.id for t in self.teams]),
+            ("de terrain", [f.id for f in self.fields]),
+            ("de créneau", [s.id for s in self.slots]),
         ):
             duplicates = sorted(i for i, n in Counter(ids).items() if n > 1)
             if duplicates:
-                errors.append(f"identifiant(s) de {label} en double : {', '.join(duplicates)}")
+                errors.append(f"identifiant(s) {label} en double : {', '.join(duplicates)}")
 
         slot_ids = {s.id for s in self.slots}
         team_ids = {t.id for t in self.teams}
