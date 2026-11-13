@@ -8,8 +8,9 @@ from __future__ import annotations
 import argparse
 from itertools import groupby
 
+from planning.checker import validate
 from planning.domain import Match, Tournament, load_tournament
-from planning.solver import SolveResult, SolveStatus, solve_tournament
+from planning.solver import SolveResult, SolveStatus, solve_tournament, to_schedule
 
 _DAYS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"]
 
@@ -30,6 +31,10 @@ def render(tournament: Tournament, matches: list[Match], result: SolveResult) ->
             lines.append(f"  matchs impossibles à placer : {', '.join(result.empty_domains)}")
     if result.assignment is None:
         return "\n".join(lines)
+
+    violations = validate(tournament, to_schedule(result.assignment), matches)
+    lines.append(f"vérification indépendante : {len(violations)} violation(s)")
+    lines += [f"  ✗ {v.constraint or 'planning'} — {v.message}" for v in violations]
 
     by_id = {m.id: m for m in matches}
     fields = [f.id for f in tournament.fields]
