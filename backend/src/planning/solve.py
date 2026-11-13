@@ -1,4 +1,4 @@
-"""Résout un tournoi depuis la ligne de commande et affiche le planning.
+"""Planifie un tournoi depuis la ligne de commande : planning ou diagnostic d'échec.
 
 uv run python -m planning.solve ../datasets/small.json [--timeout 10]
 """
@@ -9,28 +9,36 @@ import argparse
 from itertools import groupby
 
 from planning.checker import validate
-from planning.domain import Match, Tournament, load_tournament
-from planning.solver import SolveResult, SolveStatus, solve_tournament, to_schedule
+from planning.diagnosis import Feasibility
+from planning.domain import Tournament, load_tournament
+from planning.planner import PlanningReport, plan
+from planning.solver import to_schedule
 
 _DAYS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"]
 
 
-def render(tournament: Tournament, matches: list[Match], result: SolveResult) -> str:
-    s = result.stats
+def render(tournament: Tournament, report: PlanningReport) -> str:
+    matches, result, diagnosis = report.matches, report.result, report.diagnosis
     lines = [
         f"{tournament.name} — {len(matches)} matchs, "
         f"{len(tournament.slots)} créneaux × {len(tournament.fields)} terrains",
-        f"statut : {result.status}  |  nœuds : {s.nodes}  |  retours arrière : {s.backtracks}"
-        f"  |  profondeur max : {s.max_depth}/{len(matches)}  |  {s.elapsed_seconds * 1000:.1f} ms",
     ]
-    if result.status is SolveStatus.TIMEOUT:
-        lines.append("→ pas de solution trouvée dans le temps imparti (ce n'est pas une preuve).")
-    if result.status is SolveStatus.INFEASIBLE:
-        lines.append("→ aucune solution n'existe (recherche exhaustive).")
-        if result.empty_domains:
-            lines.append(f"  matchs impossibles à placer : {', '.join(result.empty_domains)}")
-    if result.assignment is None:
+    if result is not None:
+        s = result.stats
+        lines.append(
+            f"recherche : {result.status}  |  nœuds : {s.nodes}  |  retours arrière : "
+            f"{s.backtracks}  |  profondeur max : {s.max_depth}/{len(matches)}  |  "
+            f"{s.elapsed_seconds * 1000:.1f} ms"
+        )
+    lines += ["", f"[{diagnosis.feasibility}] {diagnosis.summary}"]
+    for conflict in diagnosis.conflicts:
+        ids = ", ".join(sorted({c.id.value for c in conflict.constraints}))
+        lines += ["", f"✗ Conflit ({ids}) : {conflict.explanation}"]
+        lines += [f"  → {s}" for s in conflict.suggestions]
+
+    if diagnosis.feasibility is not Feasibility.FEASIBLE or result is None:
         return "\n".join(lines)
+    assert result.assignment is not None
 
     violations = validate(tournament, to_schedule(result.assignment), matches)
     lines.append(f"vérification indépendante : {len(violations)} violation(s)")
@@ -60,9 +68,9 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     tournament = load_tournament(args.tournament)
-    matches, result = solve_tournament(tournament, args.timeout)
-    print(render(tournament, matches, result))
-    return 0 if result.status is SolveStatus.SOLVED else 1
+    report = plan(tournament, args.timeout)
+    print(render(tournament, report))
+    return 0 if report.diagnosis.feasibility is Feasibility.FEASIBLE else 1
 
 
 if __name__ == "__main__":

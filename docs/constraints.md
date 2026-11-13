@@ -166,4 +166,14 @@ Avant de lancer la recherche, des conditions nécessaires simples permettent de 
 - **Quotas minimum** : $\sum_s \text{min\_matches}(s) \le |M|$.
 
 Ces tests ne sont pas suffisants : un tournoi qui les passe peut quand même être insoluble, ce que
-seule la recherche complète peut établir.
+seule la recherche complète peut établir. Dans ce cas, un **filtre par suppression** retire les
+contraintes une à une et relance la recherche : celles dont le retrait rend le problème soluble
+forment un sous-ensemble minimal de règles incompatibles, présenté à l'utilisateur avec des
+suggestions. Implémentation : `backend/src/planning/diagnosis.py` et `planner.py`.
+
+Exemple (3 équipes, 3 créneaux d'1 h consécutifs, 60 min de repos) : chaque équipe n'a besoin que
+de 2 créneaux espacés et en a 2 (09:00 et 11:00), donc les pré-vérifications passent ; mais les 3
+matchs partagent deux à deux une équipe et devraient tous être espacés d'1 h, ce qui demande 3
+créneaux. Le filtre isole les trois règles de repos (H5).
+
+Le diagnostic distingue toujours **impossible** (prouvé) et **inconnu** (timeout).
