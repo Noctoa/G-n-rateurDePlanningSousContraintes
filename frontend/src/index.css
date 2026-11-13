@@ -94,6 +94,7 @@ textarea {
   border-radius: 6px;
   padding: 0.35rem 0.5rem;
   min-width: 0;
+  max-width: 100%;
 }
 
 textarea {
@@ -211,7 +212,11 @@ code {
 
 .editor {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.75rem;
+}
+.section {
+  min-width: 0;
 }
 
 .section summary {
@@ -260,6 +265,7 @@ code {
 }
 .field.inline {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
   width: auto;
@@ -510,23 +516,206 @@ code {
   margin: 0.75rem 0;
 }
 
-/* --- Planning (affichage provisoire, cf. #9) ---------------------------------------- */
+/* --- Planning généré ---------------------------------------------------------------- */
+
+:root {
+  --pool-0: #2f5bea;
+  --pool-1: #d4570b;
+  --pool-2: #0e8a6a;
+  --pool-3: #b4237a;
+  --pool-4: #7a5af8;
+  --pool-5: #8a6d00;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --pool-0: #6f8cff;
+    --pool-1: #ff9a5c;
+    --pool-2: #3fd1a4;
+    --pool-3: #f26bb8;
+    --pool-4: #a991ff;
+    --pool-5: #e0c04f;
+  }
+}
+[data-pool='0'] {
+  --pool: var(--pool-0);
+}
+[data-pool='1'] {
+  --pool: var(--pool-1);
+}
+[data-pool='2'] {
+  --pool: var(--pool-2);
+}
+[data-pool='3'] {
+  --pool: var(--pool-3);
+}
+[data-pool='4'] {
+  --pool: var(--pool-4);
+}
+[data-pool='5'] {
+  --pool: var(--pool-5);
+}
 
 .schedule {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
 }
-.schedule-table {
+.programme {
+  overflow-x: auto;
+}
+h3 {
+  font-size: 0.95rem;
+  margin: 0 0 0.5rem;
+}
+
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0;
+}
+.stat {
+  background: var(--bg);
+  border-radius: 6px;
+  padding: 0.4rem 0.8rem;
+  min-width: 8rem;
+}
+.stat dt {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.stat dd {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.schedule-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+}
+.schedule-toolbar .spacer {
+  flex: 1;
+}
+.pool-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.pool-chip {
+  font-size: 0.8rem;
+  border-left: 4px solid var(--pool, var(--border));
+  background: var(--bg);
+  border-radius: 4px;
+  padding: 0.05rem 0.5rem;
+}
+
+.programme {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+}
+
+.day-grid-wrapper {
+  overflow-x: auto;
+}
+.day-grid {
+  border-collapse: separate;
+  border-spacing: 4px;
+  width: 100%;
   table-layout: fixed;
+  min-width: 36rem;
 }
-.schedule-table th:first-child {
-  width: 4.5rem;
+.day-grid th {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-align: left;
+  padding: 0 0.25rem;
 }
-.schedule-table td {
+.day-grid thead th:first-child {
+  width: 3.5rem;
+}
+.day-grid tbody th {
+  vertical-align: top;
+  padding-top: 0.45rem;
+  font-variant-numeric: tabular-nums;
+}
+.day-grid td {
+  vertical-align: top;
+  height: 4.6rem;
+  border-radius: 6px;
+}
+.day-grid td.free {
+  border: 1px dashed var(--border);
+}
+.day-grid td.closed {
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--bg),
+    var(--bg) 6px,
+    transparent 6px,
+    transparent 12px
+  );
+  color: var(--muted);
+  font-size: 0.75rem;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.match-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--pool, var(--accent));
+  border-radius: 6px;
+  background: var(--surface);
+  transition: opacity 0.15s;
+}
+.match-card.dim {
+  opacity: 0.28;
+}
+.match-card.focus {
+  box-shadow: 0 0 0 2px var(--pool, var(--accent));
+}
+.card-team {
+  all: unset;
+  cursor: pointer;
+  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.schedule-table td.match {
-  font-weight: 500;
+.card-team:hover {
+  text-decoration: underline;
+}
+.card-team:focus-visible {
+  outline: 2px solid var(--accent);
+}
+.card-team.current {
+  color: var(--pool, var(--accent));
+}
+.card-vs {
+  font-size: 0.7rem;
+  color: var(--muted);
+  line-height: 1;
+}
+.card-meta {
+  margin-top: auto;
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-family: ui-monospace, monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.no-schedule {
+  max-width: 50rem;
 }

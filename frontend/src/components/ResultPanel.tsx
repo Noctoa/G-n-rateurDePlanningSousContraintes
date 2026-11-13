@@ -1,8 +1,5 @@
-// Affichage minimal du résultat d'une génération. La vraie visualisation arrive avec #9.
-import type { JobView, Tournament } from '../api/client.ts'
-import { findSlot, slotGrid } from '../lib/tournament.ts'
-import { formatDay } from '../lib/format.ts'
-import { ConflictCard } from './ValidationPanel.tsx'
+// Statut court de la génération dans la barre latérale ; le détail est dans ScheduleView.
+import type { JobView } from '../api/client.ts'
 
 const STATUS_LABEL: Record<JobView['status'], string> = {
   pending: 'En attente…',
@@ -21,77 +18,23 @@ export function ResultPanel({ job }: { job: JobView }) {
       : job.status === 'infeasible' || job.status === 'error'
         ? 'error'
         : 'warning'
+  const final = job.status !== 'pending' && job.status !== 'running'
   return (
     <div>
       <p className={`status ${tone}`}>{STATUS_LABEL[job.status]}</p>
-      {job.diagnosis && <p>{job.diagnosis.summary}</p>}
+      {job.diagnosis && <p className="small">{job.diagnosis.summary}</p>}
       {job.stats && (
         <p className="muted small">
-          {job.stats.nodes.toLocaleString('fr-FR')} nœuds explorés ·{' '}
+          {job.stats.nodes.toLocaleString('fr-FR')} nœuds ·{' '}
           {job.stats.backtracks.toLocaleString('fr-FR')} retours arrière ·{' '}
-          {job.stats.elapsed_ms.toLocaleString('fr-FR')} ms
+          {Math.round(job.stats.elapsed_ms).toLocaleString('fr-FR')} ms
         </p>
       )}
-      {job.error && <p className="status error">{job.error}</p>}
-      {job.diagnosis?.conflicts.map((c, i) => (
-        <ConflictCard key={i} conflict={c} />
-      ))}
-      {job.violations.length > 0 && (
-        <ul className="errors">
-          {job.violations.map((v, i) => (
-            <li key={i}>
-              <b>{v.constraint}</b> {v.message}
-            </li>
-          ))}
-        </ul>
+      {final && (
+        <a className="small" href="#resultat">
+          {job.schedule ? 'Voir le planning ↓' : 'Voir le diagnostic ↓'}
+        </a>
       )}
-    </div>
-  )
-}
-
-export function ScheduleTable({ job, tournament }: { job: JobView; tournament: Tournament }) {
-  if (!job.schedule) return null
-  const matches = new Map(job.matches.map((m) => [m.id, m]))
-  const teamName = new Map(tournament.teams.map((t) => [t.id, t.name]))
-  const at = new Map(job.schedule.assignments.map((a) => [`${a.slot_id}|${a.field_id}`, a]))
-  const { days, times } = slotGrid(tournament)
-
-  return (
-    <div className="schedule">
-      {days.map((day) => (
-        <div key={day} className="mini-grid-wrapper">
-          <h4>{formatDay(day)}</h4>
-          <table className="table schedule-table">
-            <thead>
-              <tr>
-                <th />
-                {tournament.fields.map((f) => (
-                  <th key={f.id}>{f.name}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {times.map((time) => {
-                const slot = findSlot(tournament, day, time)
-                return (
-                  <tr key={time}>
-                    <th>{time}</th>
-                    {tournament.fields.map((f) => {
-                      const a = slot && at.get(`${slot.id}|${f.id}`)
-                      const m = a && matches.get(a.match_id)
-                      return (
-                        <td key={f.id} className={m ? 'match' : 'empty'}>
-                          {m ? `${teamName.get(m.home)} – ${teamName.get(m.away)}` : ''}
-                        </td>
-                      )
-                    })}
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      ))}
     </div>
   )
 }

@@ -2,13 +2,15 @@ import { useEffect, useRef, useState } from 'react'
 import { api, type JobView, type Tournament, type ValidationReport } from './api/client.ts'
 import { AvailabilityGrid } from './components/AvailabilityGrid.tsx'
 import { FieldsEditor } from './components/FieldsEditor.tsx'
-import { ResultPanel, ScheduleTable } from './components/ResultPanel.tsx'
+import { ResultPanel } from './components/ResultPanel.tsx'
 import { HardRulesEditor, SoftWeightsEditor } from './components/RulesEditor.tsx'
 import { Section } from './components/Section.tsx'
+import { ScheduleView } from './components/ScheduleView.tsx'
 import { SlotsEditor } from './components/SlotsEditor.tsx'
 import { TeamsEditor } from './components/TeamsEditor.tsx'
 import { ValidationPanel } from './components/ValidationPanel.tsx'
 import { EXAMPLES } from './data/examples.ts'
+import { download, slug } from './lib/download.ts'
 import { emptyTournament, normalize, toExportJson } from './lib/tournament.ts'
 
 const DRAFT_KEY = 'planning:draft'
@@ -21,24 +23,6 @@ function loadDraft(): Tournament {
     // stockage indisponible ou brouillon corrompu : on repart d'un exemple
   }
   return normalize(EXAMPLES[0].tournament)
-}
-
-function download(filename: string, content: string) {
-  const url = URL.createObjectURL(new Blob([content], { type: 'application/json' }))
-  const a = Object.assign(document.createElement('a'), { href: url, download: filename })
-  a.click()
-  URL.revokeObjectURL(url)
-}
-
-function slug(name: string): string {
-  return (
-    name
-      .normalize('NFD')
-      .replace(/[̀-ͯ]/g, '')
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '') || 'tournoi'
-  )
 }
 
 function App() {
@@ -155,7 +139,13 @@ function App() {
             }}
           />
           <button
-            onClick={() => download(`${slug(tournament.name)}.json`, toExportJson(tournament))}
+            onClick={() =>
+              download(
+                `${slug(tournament.name)}.json`,
+                toExportJson(tournament),
+                'application/json',
+              )
+            }
           >
             Exporter JSON
           </button>
@@ -253,10 +243,10 @@ function App() {
         </aside>
       </main>
 
-      {job?.schedule && jobTournament && (
-        <section className="panel wide">
-          <h2>Planning</h2>
-          <ScheduleTable job={job} tournament={jobTournament} />
+      {job && !running && jobTournament && (
+        <section className="panel wide" id="resultat">
+          <h2>{job.schedule ? `Planning — ${jobTournament.name}` : 'Diagnostic'}</h2>
+          <ScheduleView key={job.job_id} job={job} tournament={jobTournament} />
         </section>
       )}
     </div>
