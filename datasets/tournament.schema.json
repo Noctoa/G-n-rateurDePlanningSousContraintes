@@ -124,6 +124,18 @@
       "title": "Slot",
       "type": "object"
     },
+    "SoftConstraintId": {
+      "description": "Contraintes souples : chaque violation coûte une pénalité pondérée.",
+      "enum": [
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5"
+      ],
+      "title": "SoftConstraintId",
+      "type": "string"
+    },
     "Team": {
       "additionalProperties": false,
       "description": "Une équipe participante.",
@@ -291,6 +303,18 @@
     },
     "rules": {
       "$ref": "#/$defs/Rules"
+    },
+    "weights": {
+      "additionalProperties": {
+        "minimum": 0,
+        "type": "integer"
+      },
+      "description": "Poids des contraintes souples (S1…S5). Les poids absents prennent leur valeur par défaut ; 0 désactive la contrainte.",
+      "propertyNames": {
+        "$ref": "#/$defs/SoftConstraintId"
+      },
+      "title": "Weights",
+      "type": "object"
     }
   },
   "required": [

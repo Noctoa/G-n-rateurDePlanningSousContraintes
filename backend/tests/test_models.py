@@ -5,6 +5,7 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
+from planning.constraints.catalog import SoftConstraintId
 from planning.domain import Tournament, generate_matches, load_tournament
 from planning.domain.io import dump_schema
 
@@ -108,3 +109,13 @@ def test_committed_json_schema_is_up_to_date() -> None:
     committed = json.loads((DATASETS / "tournament.schema.json").read_text(encoding="utf-8"))
     fix = "uv run python -m planning.export_schema ../datasets/tournament.schema.json"
     assert committed == json.loads(dump_schema()), f"Schéma obsolète, relancer : {fix}"
+
+
+def test_weights_override_defaults_partially() -> None:
+    t = Tournament.model_validate(_base() | {"weights": {"S1": 0, "S3": 5}})
+    weights = t.effective_weights
+    assert weights[SoftConstraintId.PREFERRED_SLOTS] == 0
+    assert weights[SoftConstraintId.AVOID_LATE_SLOTS] == 5
+    assert weights[SoftConstraintId.FIELD_BALANCE] == 1  # défaut du catalogue
+    _invalid(_base() | {"weights": {"S9": 1}}, "S1")
+    _invalid(_base() | {"weights": {"S1": -1}}, "greater than or equal to 0")

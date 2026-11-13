@@ -39,7 +39,10 @@ export interface Rules {
 
 export type TournamentFormat = 'round_robin' | 'double_round_robin'
 
+export type SoftConstraintId = 'S1' | 'S2' | 'S3' | 'S4' | 'S5'
+
 export interface Tournament {
+  $schema?: string
   name: string
   description?: string | null
   format?: TournamentFormat
@@ -48,6 +51,8 @@ export interface Tournament {
   slots: Slot[]
   incompatibilities?: Incompatibility[]
   rules?: Rules
+  /** Poids des contraintes souples ; les absents prennent leur valeur par défaut. */
+  weights?: Partial<Record<SoftConstraintId, number>>
 }
 
 // --- Résultats --------------------------------------------------------------------------

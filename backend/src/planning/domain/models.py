@@ -14,7 +14,9 @@ from enum import StrEnum
 from itertools import pairwise
 from typing import Annotated, Self
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, NonNegativeInt, model_validator
+
+from planning.constraints.catalog import DEFAULT_WEIGHTS, SoftConstraintId
 
 Identifier = Annotated[
     str,
@@ -133,8 +135,17 @@ class Tournament(_Model):
     slots: list[Slot] = Field(min_length=1)
     incompatibilities: list[Incompatibility] = Field(default_factory=list)
     rules: Rules = Field(default_factory=Rules)
+    weights: dict[SoftConstraintId, NonNegativeInt] = Field(
+        default_factory=dict,
+        description="Poids des contraintes souples (S1…S5). Les poids absents prennent leur "
+        "valeur par défaut ; 0 désactive la contrainte.",
+    )
 
     # --- accès pratiques -------------------------------------------------------------
+
+    @property
+    def effective_weights(self) -> dict[SoftConstraintId, int]:
+        return {**DEFAULT_WEIGHTS, **self.weights}
 
     @property
     def pools(self) -> dict[str | None, list[Team]]:
