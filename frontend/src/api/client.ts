@@ -124,11 +124,13 @@ export const FINAL_STATUSES: ReadonlySet<JobStatus> = new Set([
 
 export interface JobCreated {
   job_id: string
+  tournament_id: string
   status: JobStatus
 }
 
 export interface JobView {
   job_id: string
+  tournament_id: string
   status: JobStatus
   tournament_name: string
   timeout_seconds: number
@@ -166,6 +168,20 @@ export interface Health {
   version: string
 }
 
+export interface SavedTournament {
+  id: string
+  tournament: Tournament
+  created_at: string
+  updated_at: string
+  schedules_count: number
+}
+
+export interface SavedSchedule extends JobView {
+  tournament: Tournament
+  score: number | null
+  solver_parameters: { algorithm: string; timeout_seconds: number }
+}
+
 // --- Transport --------------------------------------------------------------------------
 
 export class ApiError extends Error {
@@ -186,8 +202,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     ...init,
   })
   if (!response.ok) {
-    throw new ApiError(response.status, await response.text())
+    const body: unknown = await response.json().catch(() => null)
+    const detail = body && typeof body === 'object' && 'detail' in body ? body.detail : null
+    throw new ApiError(
+      response.status,
+      typeof detail === 'string' ? detail : `Erreur ${response.status}`,
+    )
   }
+  if (response.status === 204) return undefined as T
   return (await response.json()) as T
 }
 
@@ -196,16 +218,34 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 export const api = {
   health: () => request<Health>('/health'),
 
+  listTournaments: () => request<SavedTournament[]>('/tournaments'),
+
+  getTournament: (id: string) => request<SavedTournament>(`/tournaments/${id}`),
+
+  saveTournament: (tournament: Tournament, id?: string) =>
+    request<SavedTournament>(id ? `/tournaments/${id}` : '/tournaments', {
+      method: id ? 'PUT' : 'POST',
+      body: JSON.stringify(tournament),
+    }),
+
+  deleteTournament: (id: string) => request<void>(`/tournaments/${id}`, { method: 'DELETE' }),
+
+  listSchedules: (id: string) => request<SavedSchedule[]>(`/tournaments/${id}/schedules`),
+
   validateTournament: (tournament: unknown) =>
     request<ValidationReport>('/tournaments/validate', {
       method: 'POST',
       body: JSON.stringify(tournament),
     }),
 
-  createSchedule: (tournament: Tournament, timeoutSeconds = 10) =>
+  createSchedule: (tournament: Tournament, timeoutSeconds = 10, tournamentId?: string) =>
     request<JobCreated>('/schedules', {
       method: 'POST',
-      body: JSON.stringify({ tournament, timeout_seconds: timeoutSeconds }),
+      body: JSON.stringify({
+        tournament,
+        timeout_seconds: timeoutSeconds,
+        tournament_id: tournamentId,
+      }),
     }),
 
   getSchedule: (jobId: string) => request<JobView>(`/schedules/${jobId}`),
@@ -226,7 +266,9 @@ export const api = {
     } = {},
   ): Promise<JobView> {
     for (;;) {
+      if (signal?.aborted) throw new DOMException('Attente annulée', 'AbortError')
       const job = await api.getSchedule(jobId)
+      if (signal?.aborted) throw new DOMException('Attente annulée', 'AbortError')
       onUpdate?.(job)
       if (FINAL_STATUSES.has(job.status)) return job
       if (signal?.aborted) throw new DOMException('Attente annulée', 'AbortError')

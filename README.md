@@ -16,7 +16,7 @@ Le cœur du projet est le solveur : un CSP par backtracking (MRV, forward checki
 
 | Partie | Techno |
 |---|---|
-| Backend | Python 3.12, FastAPI, `uv`, `ruff`, `mypy --strict`, `pytest` |
+| Backend | Python 3.12, FastAPI, SQLite + SQLAlchemy, `uv`, `ruff`, `mypy --strict`, `pytest` |
 | Frontend | React 19 + TypeScript, Vite, `oxlint`, Prettier |
 | CI | GitHub Actions : lint → tests backend → build frontend |
 
@@ -37,6 +37,25 @@ cd frontend && npm install && npm run dev
 ```bash
 cd backend && uv run python -m planning.solve ../datasets/small.json --timeout 10
 ```
+
+### Sauvegarde et historique
+
+Dans **Mes tournois**, enregistrez le formulaire ou ouvrez un tournoi existant. Générer un
+planning enregistre aussi automatiquement le tournoi. L'**historique des générations**
+permet de rouvrir chaque résultat avec ses statistiques, son diagnostic et les paramètres
+du solveur. Chaque génération conserve son propre instantané du tournoi : modifier les
+équipes ou les terrains ne change pas les anciens plannings.
+
+La base SQLite est créée automatiquement dans `backend/planning.sqlite3` avec le lancement
+ci-dessus. Pour choisir un autre fichier, définissez `PLANNING_DB_PATH`. Les résultats
+restent disponibles après rechargement de la page et redémarrage du serveur. Une recherche
+interrompue par un redémarrage est marquée comme annulée. La suppression d'un tournoi
+supprime aussi son historique ; elle est refusée pendant une génération active.
+
+L'API expose `GET/POST /api/tournaments`, `GET/PUT/DELETE /api/tournaments/{id}` et
+`GET /api/tournaments/{id}/schedules`. `POST /api/schedules` accepte un `tournament_id`
+pour ajouter une génération à un tournoi existant, et renvoie cet identifiant.
+Le champ `score` de l'historique reste `null` jusqu'à l'implémentation du score souple (#12).
 
 ## Qualité
 

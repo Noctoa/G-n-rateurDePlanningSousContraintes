@@ -22,7 +22,7 @@ FINAL = {"solved", "infeasible", "timeout", "cancelled", "error"}
 
 @pytest.fixture
 def client() -> Iterator[TestClient]:
-    with TestClient(create_app(max_workers=1)) as c:  # `with` → lance le lifespan
+    with TestClient(create_app(max_workers=1, database_path=":memory:")) as c:
         yield c
 
 

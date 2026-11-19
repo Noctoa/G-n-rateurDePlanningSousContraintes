@@ -70,6 +70,9 @@ class ValidationReport(BaseModel):
 
 class ScheduleRequest(BaseModel):
     tournament: Tournament
+    tournament_id: str | None = Field(
+        default=None, description="Tournoi sauvegardé ; créé automatiquement si absent."
+    )
     timeout_seconds: float = Field(
         default=10.0,
         gt=0,
@@ -112,6 +115,7 @@ class SearchStats(BaseModel):
 
 class JobView(BaseModel):
     job_id: str
+    tournament_id: str
     status: JobStatus
     tournament_name: str
     timeout_seconds: float
@@ -133,4 +137,19 @@ class JobView(BaseModel):
 
 class JobCreated(BaseModel):
     job_id: str
+    tournament_id: str
     status: JobStatus
+
+
+class SavedTournament(BaseModel):
+    id: str
+    tournament: Tournament
+    created_at: datetime
+    updated_at: datetime
+    schedules_count: int
+
+
+class SavedSchedule(JobView):
+    tournament: Tournament = Field(description="Instantané du tournoi lors de la génération.")
+    score: float | None = Field(default=None, description="Non calculé avant l'issue #12.")
+    solver_parameters: dict[str, str | float]

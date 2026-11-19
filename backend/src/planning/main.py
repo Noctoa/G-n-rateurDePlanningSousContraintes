@@ -3,8 +3,10 @@
 uv run uvicorn planning.main:app --reload     # doc interactive : /docs
 """
 
+import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from planning import __version__
 from planning.api.jobs import JobManager
 from planning.api.routes import router
+from planning.persistence import Store
 
 DESCRIPTION = """
 Génère le planning d'un tournoi (qui joue contre qui, sur quel terrain, à quel créneau)
@@ -28,12 +31,17 @@ Identifiants des contraintes (`H1`…`H9`, `S1`…`S5`) : voir `docs/constraints
 """
 
 
-def create_app(max_workers: int = 2) -> FastAPI:
+def create_app(max_workers: int = 2, database_path: str | Path | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        app.state.jobs = JobManager(max_workers=max_workers)
-        yield
-        app.state.jobs.shutdown()
+        store = Store(database_path or os.environ.get("PLANNING_DB_PATH", "planning.sqlite3"))
+        app.state.store = store
+        app.state.jobs = JobManager(store, max_workers=max_workers)
+        try:
+            yield
+        finally:
+            app.state.jobs.shutdown()
+            store.close()
 
     app = FastAPI(
         title="Planning sous contraintes",

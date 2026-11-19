@@ -4,26 +4,26 @@ from __future__ import annotations
 
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Request, Response, status
 from pydantic import ValidationError
 
 from planning import __version__
-from planning.api.jobs import Job, JobManager
+from planning.api.jobs import JobManager
 from planning.api.schemas import (
     EXAMPLE_TOURNAMENT,
     InputError,
     JobCreated,
     JobView,
+    SavedSchedule,
+    SavedTournament,
     ScheduleRequest,
-    SearchStats,
     TournamentSummary,
     ValidationReport,
 )
-from planning.checker import validate
 from planning.diagnosis import precheck
 from planning.domain.fixtures import generate_matches
 from planning.domain.models import Tournament
-from planning.solver.tournament import to_schedule
+from planning.persistence import Store, TournamentBusyError
 
 router = APIRouter(prefix="/api")
 
@@ -35,8 +35,16 @@ def get_jobs(request: Request) -> JobManager:
 
 Jobs = Annotated[JobManager, Depends(get_jobs)]
 
+
+def get_store(request: Request) -> Store:
+    store: Store = request.app.state.store
+    return store
+
+
+Database = Annotated[Store, Depends(get_store)]
+
 _NOT_FOUND: dict[int | str, dict[str, Any]] = {
-    404: {"description": "Aucun job avec cet identifiant (ou job expiré)."}
+    404: {"description": "Aucun job avec cet identifiant (ou tournoi supprimé)."}
 }
 
 
@@ -119,37 +127,56 @@ def validate_tournament(
     )
 
 
+# --- Bibliothèque ------------------------------------------------------------------------
+
+
+@router.get("/tournaments", tags=["tournois"], summary="Tournois sauvegardés")
+def list_tournaments(store: Database) -> list[SavedTournament]:
+    return store.list_tournaments()
+
+
+@router.post("/tournaments", tags=["tournois"], status_code=status.HTTP_201_CREATED)
+def save_tournament(tournament: Tournament, store: Database) -> SavedTournament:
+    return store.save_tournament(tournament)
+
+
+@router.get("/tournaments/{tournament_id}", tags=["tournois"])
+def get_tournament(tournament_id: str, store: Database) -> SavedTournament:
+    saved = store.get_tournament(tournament_id)
+    if saved is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "tournoi inconnu")
+    return saved
+
+
+@router.put("/tournaments/{tournament_id}", tags=["tournois"])
+def update_tournament(
+    tournament_id: str, tournament: Tournament, store: Database
+) -> SavedTournament:
+    try:
+        return store.save_tournament(tournament, tournament_id)
+    except KeyError as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "tournoi inconnu") from exc
+
+
+@router.delete("/tournaments/{tournament_id}", tags=["tournois"], status_code=204)
+def delete_tournament(tournament_id: str, store: Database) -> Response:
+    try:
+        deleted = store.delete_tournament(tournament_id)
+    except TournamentBusyError as exc:
+        raise HTTPException(409, "Annulez la génération avant de supprimer ce tournoi.") from exc
+    if not deleted:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "tournoi inconnu")
+    return Response(status_code=204)
+
+
+@router.get("/tournaments/{tournament_id}/schedules", tags=["tournois"])
+def tournament_schedules(tournament_id: str, store: Database) -> list[SavedSchedule]:
+    if store.get_tournament(tournament_id) is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "tournoi inconnu")
+    return store.list_schedules(tournament_id)
+
+
 # --- Plannings ---------------------------------------------------------------------------
-
-
-def _view(job: Job) -> JobView:
-    report = job.report
-    view = JobView(
-        job_id=job.id,
-        status=job.status,
-        tournament_name=job.tournament.name,
-        timeout_seconds=job.timeout_seconds,
-        created_at=job.created_at,
-        started_at=job.started_at,
-        finished_at=job.finished_at,
-        matches=report.matches if report else generate_matches(job.tournament),
-        error=job.error,
-    )
-    if report is None:
-        return view
-    view.diagnosis = report.diagnosis
-    if report.result is not None:
-        s = report.result.stats
-        view.stats = SearchStats(
-            nodes=s.nodes,
-            backtracks=s.backtracks,
-            max_depth=s.max_depth,
-            elapsed_ms=round(s.elapsed_seconds * 1000, 3),
-        )
-        if report.result.assignment is not None:
-            view.schedule = to_schedule(report.result.assignment)
-            view.violations = validate(job.tournament, view.schedule, report.matches)
-    return view
 
 
 @router.post(
@@ -161,8 +188,11 @@ def _view(job: Job) -> JobView:
     "`job_id`. Suivre l'avancement avec `GET /api/schedules/{job_id}`.",
 )
 def create_schedule(request: ScheduleRequest, jobs: Jobs) -> JobCreated:
-    job = jobs.submit(request.tournament, request.timeout_seconds)
-    return JobCreated(job_id=job.id, status=job.status)
+    try:
+        job = jobs.submit(request.tournament, request.timeout_seconds, request.tournament_id)
+    except KeyError as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "tournoi inconnu") from exc
+    return JobCreated(job_id=job.id, tournament_id=job.tournament_id, status=job.status)
 
 
 @router.get(
@@ -175,10 +205,10 @@ def create_schedule(request: ScheduleRequest, jobs: Jobs) -> JobCreated:
     responses=_NOT_FOUND,
 )
 def get_schedule(job_id: str, jobs: Jobs) -> JobView:
-    job = jobs.get(job_id)
-    if job is None:
+    view = jobs.view(job_id)
+    if view is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "job inconnu")
-    return _view(job)
+    return view
 
 
 @router.delete(
@@ -190,7 +220,8 @@ def get_schedule(job_id: str, jobs: Jobs) -> JobView:
     responses=_NOT_FOUND,
 )
 def cancel_schedule(job_id: str, jobs: Jobs) -> JobView:
-    job = jobs.cancel(job_id)
-    if job is None:
+    jobs.cancel(job_id)
+    view = jobs.view(job_id)
+    if view is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "job inconnu")
-    return _view(job)
+    return view
