@@ -22,9 +22,8 @@ export function HardRulesEditor({
     <>
       <div className="grid-2">
         <label className="field">
-          <span>
-            <b>H5</b> Repos minimum entre deux matchs d’une équipe
-          </span>
+          <span>Repos minimum entre deux matchs</span>
+          <span className="muted small">Pour une même équipe, en minutes.</span>
           <span className="row">
             <input
               type="number"
@@ -37,9 +36,8 @@ export function HardRulesEditor({
           </span>
         </label>
         <label className="field">
-          <span>
-            <b>H6</b> Matchs maximum par équipe et par jour
-          </span>
+          <span>Matchs maximum par jour</span>
+          <span className="muted small">Pour chaque équipe. Laissez vide pour ne pas limiter.</span>
           <input
             type="number"
             min={1}
@@ -55,9 +53,8 @@ export function HardRulesEditor({
         </label>
       </div>
 
-      <h4>
-        <b>H7</b> Équipes incompatibles (ne jouent jamais en même temps)
-      </h4>
+      <h4>Équipes qui ne peuvent pas jouer en même temps</h4>
+      <p className="muted small">Par exemple, deux équipes qui partagent le même entraîneur.</p>
       {incompatibilities.length === 0 && <p className="muted small">Aucune.</p>}
       <ul className="chips-list">
         {incompatibilities.map((inc, i) => (
@@ -104,8 +101,7 @@ export function HardRulesEditor({
         Ajouter une incompatibilité
       </button>
       <p className="muted small">
-        Indisponibilités (H3, H4) et quotas par créneau (H8, H9) : dans la section « Disponibilités
-        et quotas ».
+        Pour bloquer un horaire précis, ouvrez la section « Disponibilités ».
       </p>
     </>
   )
@@ -132,7 +128,7 @@ export function SoftWeightsEditor({
             return (
               <tr key={c.id}>
                 <td>
-                  <b>{c.id}</b> {c.label}
+                  <strong>{c.label}</strong>
                   <div className="muted small">{c.help}</div>
                 </td>
                 <td className="weight">
@@ -141,7 +137,7 @@ export function SoftWeightsEditor({
                     min={0}
                     max={10}
                     value={value}
-                    aria-label={`Poids ${c.id}`}
+                    aria-label={`Importance : ${c.label}`}
                     onChange={(e) => {
                       const next = { ...weights, [c.id]: Number(e.target.value) }
                       if (next[c.id] === c.default) delete next[c.id]

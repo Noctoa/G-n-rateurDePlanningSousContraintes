@@ -107,7 +107,7 @@ class JobStatus(StrEnum):
 
 
 class SearchStats(BaseModel):
-    nodes: int = Field(description="Couples (match, placement) essayés.")
+    nodes: int = Field(description="Nœuds explorés : placements de matchs ou de journées de poule.")
     backtracks: int = Field(description="Retours arrière.")
     max_depth: int = Field(description="Plus grand nombre de matchs placés simultanément.")
     elapsed_ms: float

@@ -21,7 +21,7 @@ export function TeamsEditor({
           <thead>
             <tr>
               <th>Nom</th>
-              <th title="Identifiant court, utilisé dans le planning">Id</th>
+              <th title="Identifiant court, utilisé dans les fichiers du tournoi">Code</th>
               <th>Poule</th>
               <th aria-label="Actions" />
             </tr>

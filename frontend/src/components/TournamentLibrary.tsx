@@ -23,10 +23,6 @@ export function TournamentLibrary({
   selectedId,
   loading,
   busy,
-  dirty,
-  error,
-  canSave,
-  onSave,
   onOpen,
   onDelete,
   onRefresh,
@@ -35,10 +31,6 @@ export function TournamentLibrary({
   selectedId: string | null
   loading: boolean
   busy: boolean
-  dirty: boolean
-  error: string | null
-  canSave: boolean
-  onSave: () => void
   onOpen: (id: string) => void
   onDelete: (id: string) => void
   onRefresh: () => void
@@ -46,43 +38,22 @@ export function TournamentLibrary({
   return (
     <section className="panel library" aria-labelledby="library-title">
       <div className="library-heading">
-        <h2 id="library-title">Mes tournois</h2>
+        <h2 id="library-title">
+          Tournois enregistrés <span className="count-badge">{tournaments.length}</span>
+        </h2>
         <button className="small" disabled={busy || loading} onClick={onRefresh}>
           Actualiser
         </button>
       </div>
-      <p className="muted small">
-        Retrouvez vos tournois et tous leurs plannings après rechargement.
-      </p>
-      <div className="row wrap">
-        <button className="primary" disabled={busy || !canSave} onClick={onSave}>
-          {busy
-            ? 'Veuillez patienter…'
-            : selectedId
-              ? 'Enregistrer les modifications'
-              : 'Enregistrer le tournoi'}
-        </button>
-        <span className="muted small" role="status">
-          {dirty
-            ? 'Modifications non enregistrées'
-            : selectedId
-              ? 'Tournoi enregistré'
-              : 'Brouillon local'}
-        </span>
-      </div>
-      {error && (
-        <p className="status error" role="alert">
-          {error}
-        </p>
-      )}
       {loading ? (
         <p className="muted small" role="status">
           Chargement des tournois…
         </p>
       ) : tournaments.length === 0 ? (
-        <p className="library-empty muted small">
-          Aucun tournoi enregistré. Enregistrez le tournoi actuel ou générez votre premier planning.
-        </p>
+        <div className="planning-empty">
+          <h3>Aucun tournoi enregistré</h3>
+          <p className="muted">Créez un tournoi, puis enregistrez-le pour le retrouver ici.</p>
+        </div>
       ) : (
         <ul className="tournament-list">
           {tournaments.map((item) => (
@@ -93,12 +64,18 @@ export function TournamentLibrary({
                 aria-pressed={selectedId === item.id}
                 onClick={() => onOpen(item.id)}
               >
+                <span className="tournament-icon" aria-hidden="true">
+                  ▦
+                </span>
                 <strong>{item.tournament.name}</strong>
                 <span className="muted small">
                   {item.tournament.teams.length} équipes · {item.schedules_count} génération
                   {item.schedules_count !== 1 ? 's' : ''}
                 </span>
                 <span className="muted small">Enregistré le {dateTime(item.updated_at)}</span>
+                <span className="open-label">
+                  Ouvrir le tournoi <span aria-hidden="true">→</span>
+                </span>
               </button>
               <button
                 className="icon-button"
@@ -132,10 +109,9 @@ export function ScheduleHistory({
 }) {
   return (
     <section className="panel" aria-labelledby="history-title">
-      <h2 id="history-title">Historique des générations</h2>
-      <p className="muted small">
-        Chaque résultat conserve les équipes, terrains et créneaux utilisés lors du calcul.
-      </p>
+      <h3 id="history-title" className="sr-only">
+        Choisir une génération
+      </h3>
       {loading ? (
         <p className="muted small" role="status">
           Chargement de l’historique…
@@ -144,7 +120,7 @@ export function ScheduleHistory({
         <p className="muted small">Les générations de ce tournoi apparaîtront ici.</p>
       ) : (
         <ol className="history-list">
-          {schedules.map((schedule) => (
+          {schedules.map((schedule, index) => (
             <li key={schedule.job_id}>
               <button
                 className={`history-entry${schedule.job_id === selectedJobId ? ' selected' : ''}`}
@@ -153,16 +129,15 @@ export function ScheduleHistory({
                 onClick={() => onOpen(schedule)}
               >
                 <span className="library-heading">
-                  <strong>{dateTime(schedule.created_at)}</strong>
+                  <strong>Génération {schedules.length - index}</strong>
                   <span className={`history-status ${schedule.status}`}>
                     {STATUS[schedule.status]}
                   </span>
                 </span>
+                <span className="small muted">{dateTime(schedule.created_at)}</span>
                 {schedule.stats && (
                   <span className="small muted">
-                    {Math.round(schedule.stats.elapsed_ms).toLocaleString('fr-FR')} ms ·{' '}
-                    {schedule.stats.nodes.toLocaleString('fr-FR')} nœuds ·{' '}
-                    {schedule.stats.backtracks.toLocaleString('fr-FR')} retours arrière
+                    Calculé en {Math.round(schedule.stats.elapsed_ms).toLocaleString('fr-FR')} ms
                   </span>
                 )}
                 <span className="small muted">

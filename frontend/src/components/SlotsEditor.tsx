@@ -116,7 +116,7 @@ export function SlotsEditor({
 
       <p className="muted small">
         {tournament.slots.length} créneaux ({grid.days.length} jour(s) × {grid.times.length}{' '}
-        heure(s)). Identifiants générés : <code>{tournament.slots[0]?.id ?? '—'}</code>…
+        heure(s)).
       </p>
     </>
   )

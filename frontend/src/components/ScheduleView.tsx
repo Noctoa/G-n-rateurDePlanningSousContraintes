@@ -63,21 +63,20 @@ function NoSchedule({ job }: { job: JobView }) {
       <p className={`status ${job.status === 'infeasible' ? 'error' : 'warning'}`}>{title}</p>
       {job.diagnosis && <p>{job.diagnosis.summary}</p>}
       {job.error && <p className="status error">{job.error}</p>}
-      <dl className="stats">
-        <SearchStats job={job} />
-      </dl>
+      {job.stats && (
+        <details className="technical-details">
+          <summary>Détails du calcul</summary>
+          <dl className="stats">
+            <SearchStats job={job} />
+          </dl>
+        </details>
+      )}
       {job.diagnosis?.conflicts.map((c, i) => (
         <ConflictCard key={i} conflict={c} />
       ))}
       {job.diagnosis?.minimal && (
         <p className="muted small">
           Ensemble minimal : retirer n’importe laquelle de ces contraintes rend le problème soluble.
-        </p>
-      )}
-      {job.status === 'timeout' && (
-        <p className="muted small">
-          Le problème n’est pas prouvé impossible : augmentez le temps maximum ou relâchez une
-          contrainte.
         </p>
       )}
     </div>
@@ -116,8 +115,7 @@ function MatchCard({
       <span className="card-vs">contre</span>
       {team(match.away, placed.awayName)}
       <span className="card-meta">
-        {match.id}
-        {match.pool && ` · Poule ${match.pool}`} · J{match.round}
+        {match.pool && `Poule ${match.pool} · `} Journée {match.round}
         {match.leg > 1 && ' retour'}
       </span>
     </div>
@@ -200,7 +198,12 @@ export function ScheduleView({ job, tournament }: { job: JobView; tournament: To
       <dl className="stats">
         <Stat label="Matchs placés" value={`${rows.length} / ${job.matches.length}`} />
         <Stat label="Créneaux utilisés" value={`${usedSlots} / ${tournament.slots.length}`} />
-        <SearchStats job={job} />
+        {job.stats && (
+          <Stat
+            label="Temps de calcul"
+            value={`${Math.round(job.stats.elapsed_ms).toLocaleString('fr-FR')} ms`}
+          />
+        )}
       </dl>
 
       {job.violations.length > 0 && (
@@ -215,7 +218,7 @@ export function ScheduleView({ job, tournament }: { job: JobView; tournament: To
 
       <div className="schedule-toolbar">
         <label className="field inline">
-          <span>Équipe</span>
+          <span>Afficher une équipe</span>
           <select value={current} onChange={(e) => setSelected(e.target.value)}>
             <option value="">Toutes les équipes</option>
             {[...byPool].map(([pool, teams]) => {
@@ -268,6 +271,10 @@ export function ScheduleView({ job, tournament }: { job: JobView; tournament: To
 
       {team && <TeamProgramme rows={rows} teamId={team.id} name={team.name} />}
 
+      <p className="mobile-grid-hint muted small">
+        Faites défiler la grille horizontalement pour voir tous les terrains.
+      </p>
+
       {days.map((day) => (
         <div key={day} className="day">
           <h3>{formatDay(day)}</h3>
@@ -317,6 +324,14 @@ export function ScheduleView({ job, tournament }: { job: JobView; tournament: To
           </div>
         </div>
       ))}
+      {job.stats && (
+        <details className="technical-details">
+          <summary>Détails du calcul</summary>
+          <dl className="stats">
+            <SearchStats job={job} />
+          </dl>
+        </details>
+      )}
     </div>
   )
 }

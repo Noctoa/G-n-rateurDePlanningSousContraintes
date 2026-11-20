@@ -10,7 +10,6 @@ import {
 } from './api/client.ts'
 import { AvailabilityGrid } from './components/AvailabilityGrid.tsx'
 import { FieldsEditor } from './components/FieldsEditor.tsx'
-import { ResultPanel } from './components/ResultPanel.tsx'
 import { HardRulesEditor, SoftWeightsEditor } from './components/RulesEditor.tsx'
 import { Section } from './components/Section.tsx'
 import { ScheduleView } from './components/ScheduleView.tsx'
@@ -26,6 +25,13 @@ const DRAFT_KEY = 'planning:draft'
 const SELECTION_KEY = 'planning:selection'
 
 type Selection = { id: string; snapshot: string }
+type View = 'setup' | 'rules' | 'schedule' | 'library'
+
+const STEPS = [
+  { id: 'setup', title: 'Tournoi', detail: 'Équipes, terrains et horaires' },
+  { id: 'rules', title: 'Contraintes', detail: 'Disponibilités et règles' },
+  { id: 'schedule', title: 'Planning', detail: 'Génération et résultats' },
+] as const
 
 function loadSelection(): Selection | null {
   try {
@@ -49,6 +55,7 @@ function loadDraft(): Tournament {
 }
 
 function App() {
+  const [view, setView] = useState<View>('setup')
   const [tournament, setTournament] = useState<Tournament>(loadDraft)
   const [validationResult, setValidationResult] = useState<{
     input: Tournament
@@ -165,6 +172,12 @@ function App() {
   const running = job?.status === 'pending' || job?.status === 'running'
   const busy = running || saving || submitting
 
+  function navigate(next: View) {
+    setView(next)
+    window.scrollTo({ top: 0, behavior: 'instant' })
+    requestAnimationFrame(() => document.getElementById(`view-title-${next}`)?.focus())
+  }
+
   function confirmSwitch() {
     return (
       !dirty ||
@@ -210,6 +223,7 @@ function App() {
       else {
         setJob(null)
         setJobTournament(null)
+        navigate('setup')
       }
     } catch (error) {
       setLibraryError(error instanceof Error ? error.message : String(error))
@@ -245,6 +259,7 @@ function App() {
   }
 
   function openSchedule(schedule: SavedSchedule) {
+    navigate('schedule')
     polling.current?.abort()
     setJob(schedule)
     setJobTournament(schedule.tournament)
@@ -259,7 +274,8 @@ function App() {
     }
   }
 
-  async function generate() {
+  async function generate(timeoutSeconds = timeout) {
+    navigate('schedule')
     polling.current?.abort()
     const controller = new AbortController()
     polling.current = controller
@@ -269,7 +285,7 @@ function App() {
     setJob(null)
     setJobTournament(snapshot)
     try {
-      const created = await api.createSchedule(snapshot, timeout, selectedId ?? undefined)
+      const created = await api.createSchedule(snapshot, timeoutSeconds, selectedId ?? undefined)
       setSelection({ id: created.tournament_id, snapshot: JSON.stringify(snapshot) })
       setLibraryVersion((value) => value + 1)
       await follow(created.job_id, controller)
@@ -293,6 +309,7 @@ function App() {
   function load(t: Tournament) {
     if (!confirmSwitch()) return
     polling.current?.abort()
+    navigate('setup')
     setTournament(normalize(t))
     setSelection(null)
     setJob(null)
@@ -307,191 +324,445 @@ function App() {
     }
   }
 
+  const canSave = Boolean(validation?.valid) && !validating
+  const currentGeneration =
+    jobTournament &&
+    JSON.stringify(normalize(jobTournament)) === JSON.stringify(normalize(tournament))
+      ? job
+      : null
+  const verifiedSchedule = job?.status === 'solved' && job.schedule && job.violations.length === 0
+  const retryTimeout = Math.min(60, Math.max(timeout, (job?.timeout_seconds ?? timeout) * 3))
+  const saveLabel = saving ? 'Enregistrement…' : 'Enregistrer'
+  const saveStatus = dirty
+    ? 'Modifications non enregistrées'
+    : selectedId
+      ? 'Tournoi enregistré'
+      : 'Brouillon sur cet appareil'
+
   return (
     <div className="app">
       <header className="topbar">
-        <div>
-          <h1>Planning de tournoi</h1>
-          <input
-            className="title-input"
-            value={tournament.name}
-            aria-label="Nom du tournoi"
-            onChange={(e) => setTournament({ ...tournament, name: e.target.value })}
-          />
+        <div className="tournament-heading">
+          <p className="eyebrow">Planificateur de tournoi</p>
+          <label className="title-label">
+            <span className="sr-only">Nom du tournoi</span>
+            <input
+              className="title-input"
+              value={tournament.name}
+              onChange={(e) => setTournament({ ...tournament, name: e.target.value })}
+            />
+          </label>
+          <span className={`save-status${dirty ? ' unsaved' : ''}`} role="status">
+            <span aria-hidden="true">●</span> {saveStatus}
+          </span>
         </div>
         <div className="toolbar">
-          <select
-            value=""
-            disabled={busy}
-            aria-label="Charger un exemple"
-            onChange={(e) => {
-              const key = e.target.value
-              if (key === 'new') load(emptyTournament())
-              const example = EXAMPLES.find((x) => x.key === key)
-              if (example) load(example.tournament)
-            }}
-          >
-            <option value="" disabled>
-              Charger…
-            </option>
-            <option value="new">Nouveau tournoi vide</option>
-            {EXAMPLES.map((x) => (
-              <option key={x.key} value={x.key}>
-                Exemple : {x.label}
-              </option>
-            ))}
-          </select>
-          <button disabled={busy} onClick={() => fileInput.current?.click()}>
-            Importer JSON
-          </button>
-          <input
-            ref={fileInput}
-            type="file"
-            accept="application/json,.json"
-            hidden
-            onChange={(e) => {
-              const file = e.target.files?.[0]
-              if (file) void importFile(file)
-              e.target.value = ''
-            }}
-          />
           <button
-            onClick={() =>
-              download(
-                `${slug(tournament.name)}.json`,
-                toExportJson(tournament),
-                'application/json',
-              )
-            }
+            className={view === 'library' ? 'active-button' : ''}
+            onClick={() => navigate(view === 'library' ? 'setup' : 'library')}
+            aria-pressed={view === 'library'}
           >
-            Exporter JSON
+            Mes tournois
+          </button>
+          <button disabled={busy} onClick={() => load(emptyTournament())}>
+            Nouveau tournoi
+          </button>
+          <button disabled={busy || !canSave} onClick={() => void save()}>
+            {saveLabel}
           </button>
         </div>
       </header>
 
-      <main className="layout">
-        <div className="editor">
-          <Section title="Général">
-            <label className="field">
-              <span>Description</span>
-              <textarea
-                rows={2}
-                value={tournament.description ?? ''}
-                onChange={(e) =>
-                  setTournament({ ...tournament, description: e.target.value || null })
-                }
-              />
-            </label>
-            <label className="field inline">
-              <span>Format</span>
-              <select
-                value={tournament.format ?? 'round_robin'}
-                onChange={(e) =>
-                  setTournament({
-                    ...tournament,
-                    format: e.target.value as Tournament['format'],
-                  })
-                }
+      <nav className="steps" aria-label="Étapes du tournoi">
+        {STEPS.map((step, index) => (
+          <button
+            key={step.id}
+            className={`step${view === step.id ? ' current' : ''}`}
+            aria-current={view === step.id ? 'step' : undefined}
+            onClick={() => navigate(step.id)}
+          >
+            <span className="step-number" aria-hidden="true">
+              {index + 1}
+            </span>
+            <span>
+              <strong>{step.title}</strong>
+              <span className="step-description">{step.detail}</span>
+            </span>
+          </button>
+        ))}
+      </nav>
+
+      {libraryError && (
+        <p className="status error" role="alert">
+          {libraryError}
+        </p>
+      )}
+
+      <main
+        className={`workspace-shell${view === 'schedule' || view === 'library' ? ' full-width' : ''}`}
+      >
+        <div className="workspace-content">
+          <section hidden={view !== 'setup'} aria-labelledby="view-title-setup">
+            <div className="page-heading">
+              <p className="eyebrow">Étape 1 sur 3</p>
+              <h1 id="view-title-setup" tabIndex={-1}>
+                Préparez votre tournoi
+              </h1>
+              <p className="muted">
+                Ajoutez les participants et choisissez où et quand les matchs auront lieu.
+              </p>
+            </div>
+            <div className="editor">
+              <Section
+                title="Informations générales"
+                description="Le format et la description de votre tournoi."
               >
-                <option value="round_robin">Aller simple (chacun rencontre chacun)</option>
-                <option value="double_round_robin">Aller-retour</option>
-              </select>
-            </label>
-          </Section>
+                <label className="field">
+                  <span>
+                    Description <span className="muted">(facultatif)</span>
+                  </span>
+                  <textarea
+                    rows={2}
+                    placeholder="Ex. Tournoi de fin de saison du club"
+                    value={tournament.description ?? ''}
+                    onChange={(e) =>
+                      setTournament({ ...tournament, description: e.target.value || null })
+                    }
+                  />
+                </label>
+                <label className="field">
+                  <span>Format des rencontres</span>
+                  <select
+                    value={tournament.format ?? 'round_robin'}
+                    onChange={(e) =>
+                      setTournament({
+                        ...tournament,
+                        format: e.target.value as Tournament['format'],
+                      })
+                    }
+                  >
+                    <option value="round_robin">
+                      Aller simple — chaque équipe rencontre les autres une fois
+                    </option>
+                    <option value="double_round_robin">
+                      Aller-retour — deux rencontres par paire d’équipes
+                    </option>
+                  </select>
+                </label>
+              </Section>
+              <Section
+                title="Équipes"
+                hint={`${tournament.teams.length} équipes`}
+                description="Les participants au tournoi, regroupés en poules si besoin."
+              >
+                <TeamsEditor tournament={tournament} onChange={setTournament} />
+              </Section>
+              <Section
+                title="Terrains"
+                hint={`${tournament.fields.length} terrains`}
+                description="Les lieux disponibles pour accueillir les matchs."
+                defaultOpen={false}
+              >
+                <FieldsEditor tournament={tournament} onChange={setTournament} />
+              </Section>
+              <Section
+                title="Dates et horaires"
+                hint={`${tournament.slots.length} créneaux`}
+                description="Les jours de jeu, les heures de début et la durée d’un match."
+                defaultOpen={false}
+              >
+                <SlotsEditor tournament={tournament} onChange={setTournament} />
+              </Section>
+              <Section
+                title="Exemples et fichiers"
+                description="Partir d’un exemple ou importer un tournoi au format JSON."
+                defaultOpen={false}
+              >
+                <div className="row wrap">
+                  <select
+                    value=""
+                    disabled={busy}
+                    aria-label="Charger un exemple"
+                    onChange={(e) => {
+                      const example = EXAMPLES.find((x) => x.key === e.target.value)
+                      if (example) load(example.tournament)
+                    }}
+                  >
+                    <option value="" disabled>
+                      Choisir un exemple…
+                    </option>
+                    {EXAMPLES.map((example) => (
+                      <option key={example.key} value={example.key}>
+                        {example.label}
+                      </option>
+                    ))}
+                  </select>
+                  <button disabled={busy} onClick={() => fileInput.current?.click()}>
+                    Importer JSON
+                  </button>
+                  <button
+                    onClick={() =>
+                      download(
+                        `${slug(tournament.name)}.json`,
+                        toExportJson(tournament),
+                        'application/json',
+                      )
+                    }
+                  >
+                    Exporter JSON
+                  </button>
+                </div>
+                <input
+                  ref={fileInput}
+                  type="file"
+                  accept="application/json,.json"
+                  hidden
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) void importFile(file)
+                    e.target.value = ''
+                  }}
+                />
+              </Section>
+            </div>
+            <div className="step-footer">
+              <p className="muted small">Vos saisies sont conservées dans un brouillon local.</p>
+              <button className="primary" onClick={() => navigate('rules')}>
+                Continuer vers les contraintes <span aria-hidden="true">→</span>
+              </button>
+            </div>
+          </section>
 
-          <Section title="Équipes" hint={`${tournament.teams.length}`}>
-            <TeamsEditor tournament={tournament} onChange={setTournament} />
-          </Section>
+          <section hidden={view !== 'rules'} aria-labelledby="view-title-rules">
+            <div className="page-heading">
+              <p className="eyebrow">Étape 2 sur 3</p>
+              <h1 id="view-title-rules" tabIndex={-1}>
+                Définissez vos contraintes
+              </h1>
+              <p className="muted">
+                Précisez les indisponibilités et le rythme de jeu. Les valeurs actuelles sont déjà
+                utilisables.
+              </p>
+            </div>
+            <div className="editor">
+              <Section
+                title="Rythme des matchs"
+                description="Le repos entre deux rencontres et les limites par équipe."
+              >
+                <HardRulesEditor tournament={tournament} onChange={setTournament} />
+              </Section>
+              <Section
+                title="Disponibilités"
+                description="Choisissez une équipe ou un terrain, puis cliquez sur les horaires à modifier."
+                defaultOpen={false}
+              >
+                <AvailabilityGrid tournament={tournament} onChange={setTournament} />
+              </Section>
+              <Section
+                title="Préférences avancées"
+                description="L’importance des horaires préférés et de l’équilibre du planning."
+                defaultOpen={false}
+              >
+                <SoftWeightsEditor tournament={tournament} onChange={setTournament} />
+              </Section>
+            </div>
+            <div className="step-footer">
+              <button onClick={() => navigate('setup')}>← Retour au tournoi</button>
+              <button className="primary" onClick={() => navigate('schedule')}>
+                Continuer vers le planning <span aria-hidden="true">→</span>
+              </button>
+            </div>
+          </section>
 
-          <Section title="Terrains" hint={`${tournament.fields.length}`}>
-            <FieldsEditor tournament={tournament} onChange={setTournament} />
-          </Section>
+          <section hidden={view !== 'schedule'} aria-labelledby="view-title-schedule">
+            <div className="page-heading">
+              <p className="eyebrow">Étape 3 sur 3</p>
+              <h1 id="view-title-schedule" tabIndex={-1}>
+                Votre planning
+              </h1>
+              <p className="muted">
+                Générez les rencontres, consultez le programme de chaque équipe et exportez le
+                résultat.
+              </p>
+            </div>
+            <section className="panel generation-bar" aria-label="Générer le planning">
+              <div>
+                <h2>
+                  {running || submitting
+                    ? 'Génération en cours…'
+                    : 'Prêt à organiser les rencontres ?'}
+                </h2>
+                <p className="muted small">
+                  Le tournoi et chaque résultat sont enregistrés automatiquement.
+                </p>
+              </div>
+              <div className="generation-actions">
+                <label className="field inline">
+                  <span>Temps maximum</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={60}
+                    aria-label="Temps maximum"
+                    value={timeout}
+                    onChange={(e) =>
+                      setTimeoutSeconds(Math.min(60, Math.max(1, Number(e.target.value))))
+                    }
+                  />
+                  <span className="muted">s</span>
+                </label>
+                <button
+                  className="primary"
+                  disabled={busy || !canSave}
+                  onClick={() => void generate()}
+                >
+                  {running || submitting ? 'Génération…' : 'Générer le planning'}
+                </button>
+                {running && <button onClick={() => void cancel()}>Annuler</button>}
+              </div>
+            </section>
+            {(!validation?.valid || backendError) && (
+              <section className="panel generation-validation">
+                <ValidationPanel
+                  report={validation}
+                  loading={validating || (!validation && !backendError)}
+                  error={backendError}
+                  generation={currentGeneration}
+                />
+                <button onClick={() => navigate('setup')}>Revenir à la préparation</button>
+              </section>
+            )}
+            {running && (
+              <div className="planning-empty" role="status">
+                <span className="loading-ring" aria-hidden="true" />
+                <h2>Recherche d’un planning</h2>
+                <p className="muted">Les matchs sont placés en respectant vos contraintes.</p>
+              </div>
+            )}
+            {!job && !submitting && (
+              <div className="planning-empty">
+                <span className="empty-calendar" aria-hidden="true">
+                  ▦
+                </span>
+                <h2>Le planning apparaîtra ici</h2>
+                <p className="muted">
+                  Lancez la génération pour répartir vos {validation?.summary?.matches ?? ''} matchs
+                  entre les terrains et les horaires.
+                </p>
+              </div>
+            )}
+            {job && !running && jobTournament && (
+              <section className="panel schedule-result" id="resultat">
+                <div className="result-heading">
+                  <div>
+                    <p className="eyebrow">
+                      {job.schedule ? 'Planning généré' : 'Résultat de la recherche'}
+                    </p>
+                    <h2>{jobTournament.name}</h2>
+                  </div>
+                  <span className={`result-badge ${verifiedSchedule ? 'success' : 'attention'}`}>
+                    {verifiedSchedule
+                      ? 'Toutes les contraintes respectées'
+                      : job.status === 'timeout'
+                        ? 'Temps de recherche dépassé'
+                        : 'Consulter le diagnostic'}
+                  </span>
+                </div>
+                <ScheduleView key={job.job_id} job={job} tournament={jobTournament} />
+                {job.status === 'timeout' && (
+                  <div className="result-actions">
+                    <button
+                      className="primary"
+                      disabled={busy || !canSave}
+                      onClick={() => {
+                        setTimeoutSeconds(retryTimeout)
+                        void generate(retryTimeout)
+                      }}
+                    >
+                      Réessayer avec {retryTimeout} s
+                    </button>
+                    <button onClick={() => navigate('rules')}>Revoir les contraintes</button>
+                  </div>
+                )}
+              </section>
+            )}
+            {selectedId && (
+              <div className="history-section">
+                <Section
+                  title="Historique des générations"
+                  hint={`${history.length} résultats`}
+                  description="Rouvrir un ancien planning avec ses données d’origine."
+                  defaultOpen={false}
+                >
+                  <ScheduleHistory
+                    schedules={history}
+                    selectedJobId={job?.job_id}
+                    loading={historyLoading}
+                    disabled={busy}
+                    onOpen={openSchedule}
+                  />
+                </Section>
+              </div>
+            )}
+          </section>
 
-          <Section title="Créneaux" hint={`${tournament.slots.length}`}>
-            <SlotsEditor tournament={tournament} onChange={setTournament} />
-          </Section>
-
-          <Section title="Disponibilités et quotas" hint="H3 · H4 · H8 · H9 · préférences">
-            <AvailabilityGrid tournament={tournament} onChange={setTournament} />
-          </Section>
-
-          <Section title="Règles obligatoires" hint="H5 · H6 · H7">
-            <HardRulesEditor tournament={tournament} onChange={setTournament} />
-          </Section>
-
-          <Section title="Préférences" hint="S1 … S5" defaultOpen={false}>
-            <SoftWeightsEditor tournament={tournament} onChange={setTournament} />
-          </Section>
+          <section hidden={view !== 'library'} aria-labelledby="view-title-library">
+            <div className="page-heading">
+              <p className="eyebrow">Bibliothèque</p>
+              <h1 id="view-title-library" tabIndex={-1}>
+                Mes tournois
+              </h1>
+              <p className="muted">
+                Ouvrez un tournoi pour reprendre sa préparation ou retrouver ses plannings.
+              </p>
+            </div>
+            <TournamentLibrary
+              tournaments={tournaments}
+              selectedId={selectedId}
+              loading={libraryLoading}
+              busy={busy}
+              onOpen={(id) => void openTournament(id)}
+              onDelete={(id) => void deleteTournament(id)}
+              onRefresh={() => setLibraryVersion((value) => value + 1)}
+            />
+            <div className="step-footer">
+              <button onClick={() => navigate('setup')}>← Revenir au tournoi actuel</button>
+              <button className="primary" disabled={busy} onClick={() => load(emptyTournament())}>
+                Créer un tournoi
+              </button>
+            </div>
+          </section>
         </div>
-
-        <aside className="sidebar">
-          <TournamentLibrary
-            tournaments={tournaments}
-            selectedId={selectedId}
-            loading={libraryLoading}
-            busy={busy}
-            dirty={dirty}
-            error={libraryError}
-            canSave={Boolean(validation?.valid) && !validating}
-            onSave={() => void save()}
-            onOpen={(id) => void openTournament(id)}
-            onDelete={(id) => void deleteTournament(id)}
-            onRefresh={() => setLibraryVersion((value) => value + 1)}
-          />
+        <aside className="workspace-summary" hidden={view === 'schedule' || view === 'library'}>
           <section className="panel">
-            <h2>Vérification</h2>
+            <p className="eyebrow">En un coup d’œil</p>
+            <h2>Votre tournoi</h2>
             <ValidationPanel
               report={validation}
               loading={validating || (!validation && !backendError)}
               error={backendError}
+              generation={currentGeneration}
             />
           </section>
-
-          <section className="panel">
-            <h2>Génération</h2>
-            <label className="field inline">
-              <span>Temps maximum</span>
-              <input
-                type="number"
-                min={1}
-                max={60}
-                value={timeout}
-                onChange={(e) =>
-                  setTimeoutSeconds(Math.min(60, Math.max(1, Number(e.target.value))))
-                }
-              />
-              <span className="muted">s</span>
-            </label>
-            <div className="row">
-              <button
-                className="primary"
-                disabled={busy || validating || !validation?.valid}
-                onClick={() => void generate()}
-              >
-                Générer le planning
-              </button>
-              {running && <button onClick={() => void cancel()}>Annuler</button>}
+          <div className="guide-note">
+            <span className="guide-icon" aria-hidden="true">
+              i
+            </span>
+            <div>
+              <h3>
+                {view === 'setup'
+                  ? 'Commencez par les équipes'
+                  : 'Des règles adaptées à votre tournoi'}
+              </h3>
+              <p>
+                {view === 'setup'
+                  ? 'Les terrains et les horaires se déplient lorsque vous en avez besoin. Passez ensuite aux contraintes.'
+                  : 'Les indisponibilités et les règles obligatoires seront respectées pour chaque rencontre.'}
+              </p>
             </div>
-            {job && <ResultPanel job={job} />}
-          </section>
-          {selectedId && (
-            <ScheduleHistory
-              schedules={history}
-              selectedJobId={job?.job_id}
-              loading={historyLoading}
-              disabled={busy}
-              onOpen={openSchedule}
-            />
-          )}
+          </div>
         </aside>
       </main>
-
-      {job && !running && jobTournament && (
-        <section className="panel wide" id="resultat">
-          <h2>{job.schedule ? `Planning — ${jobTournament.name}` : 'Diagnostic'}</h2>
-          <ScheduleView key={job.job_id} job={job} tournament={jobTournament} />
-        </section>
-      )}
     </div>
   )
 }

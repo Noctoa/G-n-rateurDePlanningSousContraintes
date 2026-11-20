@@ -61,7 +61,7 @@ export function AvailabilityGrid({
       <div className="row wrap">
         <select
           value={targetKey(current)}
-          aria-label="Quoi éditer"
+          aria-label="Équipe ou terrain à modifier"
           onChange={(e) => setTarget(options.find((o) => o.key === e.target.value)!.target)}
         >
           {options.map((o) => (
@@ -152,7 +152,7 @@ export function AvailabilityGrid({
                   return (
                     <td key={day} className={`cell ${state}`}>
                       <button
-                        title={`${slot.id} : ${state === 'free' ? 'libre' : state === 'unavailable' ? 'indisponible' : 'préféré'}`}
+                        aria-label={`${team?.name ?? field?.name}, ${formatDay(day)} à ${time} : ${state === 'free' ? 'libre' : state === 'unavailable' ? 'indisponible' : 'préféré'}`}
                         onClick={() =>
                           onChange(
                             team
@@ -161,7 +161,11 @@ export function AvailabilityGrid({
                           )
                         }
                       >
-                        {state === 'unavailable' ? '✕' : state === 'preferred' ? '★' : ''}
+                        {state === 'unavailable'
+                          ? 'Indisponible'
+                          : state === 'preferred'
+                            ? '★ Préféré'
+                            : 'Libre'}
                       </button>
                     </td>
                   )

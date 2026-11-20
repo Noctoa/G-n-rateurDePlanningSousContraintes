@@ -23,7 +23,8 @@ from planning.diagnosis import (
 )
 from planning.domain.fixtures import generate_matches
 from planning.domain.models import Match, Tournament
-from planning.solver.backtracking import SolveResult, SolveStatus, StopCallback, solve
+from planning.solver.backtracking import SolveResult, SolveStatus, StopCallback
+from planning.solver.guided import solve_guided
 from planning.solver.tournament import build_problem
 
 
@@ -57,8 +58,7 @@ def plan(
             ),
         )
 
-    problem = build_problem(tournament, matches)
-    result = solve(problem, timeout_seconds, should_stop)
+    result = solve_guided(tournament, matches, timeout_seconds, should_stop)
 
     if result.status is SolveStatus.SOLVED:
         diagnosis = Diagnosis(
@@ -79,7 +79,9 @@ def plan(
         )
     else:
         core, minimal = find_conflict(
-            problem, budget_seconds=conflict_budget_seconds, should_stop=should_stop
+            build_problem(tournament, matches),
+            budget_seconds=conflict_budget_seconds,
+            should_stop=should_stop,
         )
         diagnosis = Diagnosis(
             feasibility=Feasibility.INFEASIBLE,
